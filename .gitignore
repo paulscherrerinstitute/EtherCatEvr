@@ -1,6 +1,3 @@
-# SVN files
-.svn*
-
 # EMACS temp files
 *~
 
@@ -14,6 +11,10 @@
 *.pyc
 *.bin
 *.ld
+
+# Generated VHDL
+AppGitHashPkg.vhd
+EEPROMContentPkg.vhd
 
 # OS files
 .DS_Store
