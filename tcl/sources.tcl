@@ -20,7 +20,6 @@ set files [list \
   [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/Bus2DRP.vhd"] \
   [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/Bus2I2cStreamIF.vhd"] \
   [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/Bus2SpiFlashIF.vhd"] \
-  [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/EEPROMContentPkg.vhd"] \
   [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/EEEmulPkg.vhd"] \
   [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/Lan9254ESCPkg.vhd"] \
   [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/IlaWrappersPkg.vhd"] \
@@ -85,6 +84,7 @@ set files [list \
   [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/IcapE2Reg.vhd"] \
   [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/PwmCore.vhd"] \
   [file normalize "${origin_dir}/../hdl/EcEvrProtoTop.vhd"] \
+  [file normalize "${origin_dir}/../hdl/EEPROMContentPkg.vhd"] \
   [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/Lan9254HbiImpl.vhd"] \
   [file normalize "${origin_dir}/../hdl/EcEvrProto.vhd"] \
 ]
@@ -208,6 +208,7 @@ set files [list \
 add_files -norecurse -fileset [get_filesets utils_1] $files
 
 source "${origin_dir}/../tcl/appCheckAndTouchGitHashFile.tcl"
-appCheckAndTouchGitHashFile "${origin_dir}/../hdl/AppGitHashPkg.vhd"
+file mkdir [file normalize "${origin_dir}/../build/"]
+appCheckAndTouchGitHashFile [file normalize "${origin_dir}/../build/AppGitHashPkg.vhd"]
 
-add_files -norecurse -fileset [get_filesets sources_1] [list [file normalize "${origin_dir}/../hdl/AppGitHashPkg.vhd"]]
+add_files -norecurse -fileset [get_filesets sources_1] [list [file normalize "${origin_dir}/../build/AppGitHashPkg.vhd"]]
