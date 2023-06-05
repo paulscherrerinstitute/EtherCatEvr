@@ -137,8 +137,8 @@ if { [string equal "${_evr_flavor_}" "PSI"] } {
   add_files -norecurse -fileset [get_filesets sources_1] $files
 }
 
-source "${origin_dir}/../tcl/genIla256.tcl"
-source "${origin_dir}/../tcl/genTimingGtp.tcl"
+source "${origin_dir}/../vivado/genIla256.tcl"
+source "${origin_dir}/../vivado/genTimingGtp.tcl"
 
 if { [ string equal "$_top_mod_" "TE0715Top" ] } {
   set files [list \
@@ -147,7 +147,7 @@ if { [ string equal "$_top_mod_" "TE0715Top" ] } {
   ]
   add_files -norecurse -fileset [get_filesets sources_1] $files
 
-  source "${origin_dir}/../tcl/genPS7.tcl"
+  source "${origin_dir}/../vivado/genPS7.tcl"
 
 }
 
@@ -196,18 +196,18 @@ foreach f $fpat {
 }
 
 set files [list \
-  [file normalize "${origin_dir}/../tcl/genIla256.tcl"]\
-  [file normalize "${origin_dir}/../tcl/genProject.tcl"] \
-  [file normalize "${origin_dir}/../tcl/genPS7.tcl"] \
-  [file normalize "${origin_dir}/../tcl/genTimingGtp.tcl"] \
-  [file normalize "${origin_dir}/../tcl/sources.tcl"] \
-  [file normalize "${origin_dir}/../tcl/appCheckAndTouchGitHashFile.tcl"] \
+  [file normalize "${origin_dir}/../vivado/genIla256.tcl"]\
+  [file normalize "${origin_dir}/../vivado/genProject.tcl"] \
+  [file normalize "${origin_dir}/../vivado/genPS7.tcl"] \
+  [file normalize "${origin_dir}/../vivado/genTimingGtp.tcl"] \
+  [file normalize "${origin_dir}/../vivado/sources.tcl"] \
+  [file normalize "${origin_dir}/../vivado/appCheckAndTouchGitHashFile.tcl"] \
   [file normalize "${origin_dir}/../vivado/pre_synth_run.tcl"] \
   [file normalize "${origin_dir}/../vivado/pre_bitstream.tcl"] \
 ]
 add_files -norecurse -fileset [get_filesets utils_1] $files
 
-source "${origin_dir}/../tcl/appCheckAndTouchGitHashFile.tcl"
+source "${origin_dir}/../vivado/appCheckAndTouchGitHashFile.tcl"
 file mkdir [file normalize "${origin_dir}/../build/"]
 appCheckAndTouchGitHashFile [file normalize "${origin_dir}/../build/AppGitHashPkg.vhd"]
 

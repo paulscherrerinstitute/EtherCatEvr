@@ -4,7 +4,7 @@ puts "USER PRE_BITSTREAM script"
 #source [get_files -of_objects [get_filesets utils_1] {*/appCheckAndTouchGitHashFile.tcl}]
 
 set origin_dir [file dirname [info script]]
-source "${origin_dir}/../tcl/appCheckAndTouchGitHashFile.tcl"
+source "${origin_dir}/../vivado/appCheckAndTouchGitHashFile.tcl"
 
 
 set git_hash [getGitHash]

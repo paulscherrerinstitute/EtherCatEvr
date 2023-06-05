@@ -213,7 +213,7 @@ set obj [get_filesets utils_1]
 # Set 'utils_1' fileset properties
 set obj [get_filesets utils_1]
 
-source "${origin_dir}/../tcl/sources.tcl"
+source "${origin_dir}/../vivado/sources.tcl"
 
 set idrFlowPropertiesConstraints ""
 catch {

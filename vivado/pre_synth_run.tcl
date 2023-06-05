@@ -4,7 +4,7 @@ set origin_dir [file dirname [info script]]
 
 # apparently utils_1 fileset is not set up from where we are called
 #source [get_files -of_objects [get_filesets utils_1] {*/appCheckAndTouchGitHashFile.tcl}]
-source "${origin_dir}/../tcl/appCheckAndTouchGitHashFile.tcl"
+source "${origin_dir}/../vivado/appCheckAndTouchGitHashFile.tcl"
 
 set git_hash [getGitHash]
 
