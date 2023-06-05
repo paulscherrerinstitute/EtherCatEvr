@@ -12,10 +12,6 @@
 *.bin
 *.ld
 
-# Generated VHDL
-AppGitHashPkg.vhd
-EEPROMContentPkg.vhd
-
 # OS files
 .DS_Store
 .DS_Store?
