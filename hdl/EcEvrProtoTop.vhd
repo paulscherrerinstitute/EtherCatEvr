@@ -186,6 +186,9 @@ architecture Impl of EcEvrProtoTop is
     others => selPllRefClk( MGT_REF_CLK_USED_IDX_G )
   );
 
+  -- max. frequency measurement up to 2**28 ~ 268MHz
+  subtype FreqMeasType    is unsigned(27 downto 0);
+
   signal sysClkLoc        : std_logic;
   signal sysRstLoc        : std_logic := '1';
   signal warmBootRst      : std_logic;
@@ -283,6 +286,11 @@ architecture Impl of EcEvrProtoTop is
   begin
     return std_logic_vector( resize( unsigned( x ), l ) );
   end function resize;
+
+  signal refClkMeas       : FreqMeasType;
+  signal evtClkMeas       : FreqMeasType;
+  signal refClkMeasVld    : std_logic;
+  signal evtClkMeasVld    : std_logic;
 
 begin
 
@@ -660,9 +668,38 @@ begin
 
   end block B_MGT;
 
+  B_FREQ_MEAS : block is
+  begin
+
+    U_MEAS_REFCLK : entity work.ClockMeasure
+      generic map (
+        REF_FREQ_HZ_G     => SYS_CLK_FREQ_G,
+        MEAS_FREQ_WIDTH_G => refClkMeas'length
+      )
+      port map (
+        measClk           => mgtRefClkLoc,
+        refClk            => sysClkLoc,
+        freqOut           => refClkMeas,
+        freqVldOut        => refClkMeasVld
+      );
+
+    U_MEAS_EVTCLK : entity work.ClockMeasure
+      generic map (
+        REF_FREQ_HZ_G     => SYS_CLK_FREQ_G,
+        MEAS_FREQ_WIDTH_G => evtClkMeas'length
+      )
+      port map (
+        measClk           => mgtRefClkLoc,
+        refClk            => sysClkLoc,
+        freqOut           => evtClkMeas,
+        freqVldOut        => evtClkMeasVld
+      );
+
+  end block B_FREQ_MEAS;
+
   B_LOC_REGS : block is
 
-    constant NUM_REGS_C : natural := 8;
+    constant NUM_REGS_C : natural := 16;
 
     type StateType is (IDLE);
 
@@ -708,7 +745,9 @@ begin
        sfpPresentb, sfpTxFault, sfpLos,
        mgtStatus,
        evrMGTControl,
-       timingMMCMLocked
+       timingMMCMLocked,
+       evtClkMeas, evtClkMeasVld,
+       refClkMeas, refClkMeasVld
      ) is
        variable v : RegType;
        variable a : unsigned(7 downto 0);
@@ -763,6 +802,15 @@ begin
                                          v.regs(1)'length );
 
       v.regs(4)(19 downto 16) := "0" & sfpPresentb(0) & sfpTxFault(0) & sfpLos(0);
+
+      if ( refClkMeasVld = '1' ) then
+         v.regs(8) := std_logic_vector( resize( refClkMeas, v.regs(8)'length ) );
+      end if;
+
+      if ( evtClkMeasVld = '1' ) then
+         v.regs(9) := std_logic_vector( resize( evtClkMeas, v.regs(9)'length ) );
+      end if;
+
       rin <= v;
     end process P_COMB;
 

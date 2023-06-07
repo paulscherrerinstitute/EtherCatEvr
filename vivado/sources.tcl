@@ -20,6 +20,7 @@ set files [list \
   [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/Bus2DRP.vhd"] \
   [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/Bus2I2cStreamIF.vhd"] \
   [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/Bus2SpiFlashIF.vhd"] \
+  [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/ClockMeasure.vhd"] \
   [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/EEEmulPkg.vhd"] \
   [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/Lan9254ESCPkg.vhd"] \
   [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/IlaWrappersPkg.vhd"] \
