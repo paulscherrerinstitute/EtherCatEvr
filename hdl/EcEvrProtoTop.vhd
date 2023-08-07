@@ -245,6 +245,7 @@ architecture Impl of EcEvrProtoTop is
 
   signal evrMGTStatus     : EvrMGTStatusType;
   signal evrMGTControl    : EvrMGTControlType;
+  signal evrDCMode        : std_logic;
   signal mgtStatus        : MgtStatusType;
   signal mgtControl       : MgtControlType;
   signal timingMMCMLocked : std_logic := '0';
@@ -480,6 +481,7 @@ begin
       fileWP            => fileWP,
 
       evrStable         => evrStable,
+      evrDCMode         => evrDCMode,
 
       timingMGTStatus   => evrMGTStatus,
       timingMGTControl  => evrMGTControl,
@@ -533,6 +535,9 @@ begin
       );
 
     U_MGT : entity work.TimingMgtWrapper
+      generic map (
+        GEN_RX_ILA_G     => true
+      )
       port map (
         sysClk           => sysClkLoc, -- in  std_logic;
         sysRst           => sysRstLoc, -- in  std_logic;
@@ -877,7 +882,7 @@ begin
 
     tstLedPw          <= r.regs(3)(tstLedPw'range);
 
-    sfpTxEn(0)        <= r.regs(4)(          31);
+    sfpTxEn(0)        <= r.regs(4)(          31) or evrDCMode;
     dbgTrg            <= r.regs(4)(          30);
     dbgVal            <= r.regs(5);
 
