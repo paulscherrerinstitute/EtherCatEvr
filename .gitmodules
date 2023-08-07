@@ -4,10 +4,6 @@
 [submodule "firmware/submodules/psi_common"]
 	path = submodules/psi_common
 	url = https://github.com/paulscherrerinstitute/psi_common
-[submodule "firmware/submodules/evr320"]
-	path = submodules/evr320
-	url = https://git.psi.ch/straumann_t/evr320.git/
-	branch = straumann_t
 [submodule "firmware/submodules/ecevr-core"]
 	path = submodules/ecevr-core
 	url = git@github.com:paulscherrerinstitute/ecevr-core.git
