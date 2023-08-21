@@ -31,8 +31,6 @@ entity TimingMgtWrapper is
       PLL0_FBDIV_G       : integer    := 4; -- legal: 1,2,3,4,5
       PLL0_FBDIV_45_G    : integer    := 5; -- legal: 4,5
       PLL0_REFCLK_DIV_G  : integer    := 1; -- legal: 1,2
-      RXOUT_DIV_G        : natural    := 2; -- legal: 1,2,4,8
-      TXOUT_DIV_G        : natural    := 2; -- legal: 1,2,4,8
       GEN_RX_ILA_G       : boolean    := true;
       GEN_CTL_ILA_G      : boolean    := false
    );
@@ -67,7 +65,6 @@ entity TimingMgtWrapper is
       -- can hook up just one input (gtRefClk(0) or gtRefClk(1)) to avoid instantiation
       -- of unnecessary buffers etc.
       gtRefClk           : in  std_logic_vector;
-      gtRefClkBuf        : out std_logic_vector(1 downto 0) := (others => '0');
 
       -- for special purposes we can connect a fabric clock
       gtgRefClk          : in  std_logic_vector(1 downto 0) := (others => '0');
@@ -80,13 +77,30 @@ entity TimingMgtWrapper is
       rxData             : out std_logic_vector(15 downto 0);
       rxDataK            : out std_logic_vector( 1 downto 0);
       rxOutClk           : out std_logic;
+      -- control RX rate divisor;  1, 2, 4, or 8 (rate = fref * PLL_FBDIV * PLL_FBDIV_45 * 2 / rxRATEDiv
+      --  "001" -> 1
+      --  "010" -> 2
+      --  "011" -> 4
+      --  "100" -> 8
+      -- in 'rxUsrClk' domain
+      rxRate             : in  std_logic_vector(2 downto 0) := "010";
 
       -- Transmitter
       txUsrClk           : in  std_logic;
       txUsrClkActive     : in  std_logic := '1';
       txData             : in  std_logic_vector(15 downto 0)            := (others => '0');
       txDataK            : in  std_logic_vector( 1 downto 0)            := (others => '0');
-      txOutClk           : out std_logic;
+      -- control TX rate divisor;  1, 2, 4, or 8 (rate = fref * PLL_FBDIV * PLL_FBDIV_45 * 2 / txRATEDiv
+      --  "001" -> 1
+      --  "010" -> 2
+      --  "011" -> 4
+      --  "100" -> 8
+      -- in 'txUsrClk' domain
+      txRate             : in  std_logic_vector(2 downto 0) := "010";
+
+      -- unbuffered TXOUTCLK
+      txOutClkNb         : out std_logic;
+
 
       -- MGT control + status; different clock domains
       mgtControl         : in  MGTControlType := MGT_CONTROL_INIT_C;
@@ -95,19 +109,6 @@ entity TimingMgtWrapper is
 end entity TimingMgtWrapper;
 
 architecture Impl of TimingMgtWrapper is
-
-   type RateMapArray is array(natural range 1 to 8) of std_logic_vector(2 downto 0);
-
-   constant RATE_MAP_C : RateMapArray := (
-      1 => "001",
-      2 => "010",
-      4 => "011",
-      8 => "100",
-      others => "001" -- ILLEGAL
-   );
-
-   constant RXRATE_C : std_logic_vector(2 downto 0) := RATE_MAP_C(RXOUT_DIV_G);
-   constant TXRATE_C : std_logic_vector(2 downto 0) := RATE_MAP_C(TXOUT_DIV_G);
 
    -- PLL note:
    -- the 'gtPllSel' input sets the mux which actually feeds the
@@ -164,10 +165,8 @@ architecture Impl of TimingMgtWrapper is
    signal rxDecErr_i        : std_logic_vector(1 downto 0);
 
    signal rxOutClk_i        : std_logic;
-   signal txOutClk_i        : std_logic;
 
    signal rxOutClk_b        : std_logic;
-   signal txOutClk_b        : std_logic;
 
    signal txRstDone         : std_logic;
    signal rxRstDone         : std_logic;
@@ -246,7 +245,7 @@ begin
          ------------------------------- Loopback Ports -----------------------------
          gt0_loopback_in                 =>      loopbackMode,
          --------------- Receive Ports - Rate Control -------------------------------
-         gt0_rxrate_in                   =>      RXRATE_C,
+         gt0_rxrate_in                   =>      rxRate,
          --------------------- RX Initialization and Reset Ports --------------------
          gt0_eyescanreset_in             =>      '0',
          gt0_rxuserrdy_in                =>      '1',
@@ -293,14 +292,14 @@ begin
          gt0_txusrclk_in                 =>      txUsrClk,
          gt0_txusrclk2_in                =>      txUsrClk,
          --------------- Tramsmit Ports - Rate Control ------------------------------
-         gt0_txrate_in                   =>      TXRATE_C,
+         gt0_txrate_in                   =>      txRate,
          ------------------ Transmit Ports - TX Data Path interface -----------------
          gt0_txdata_in                   =>      txData,
          ---------------- Transmit Ports - TX Driver and OOB signaling --------------
          gt0_gtptxn_out                  =>      gtTxN,
          gt0_gtptxp_out                  =>      gtTxP,
          ----------- Transmit Ports - TX Fabric Clock Output Control Ports ----------
-         gt0_txoutclk_out                =>      txOutClk_i,
+         gt0_txoutclk_out                =>      txOutClkNb,
          gt0_txoutclkfabric_out          =>      open,
          gt0_txoutclkpcs_out             =>      open,
          --------------- Tramsmit Ports - Rate Control ------------------------------
@@ -343,8 +342,6 @@ begin
    pllRefClkLost_x <= mapPll( gtPllSel_i, pllRefClkLost_i );
    pllLocked_x     <= mapPll( gtPllSel_i, pllLocked_i );
 
-   U_BUF_TXCLK : component BUFG port map ( I => txOutClk_i, O => txOutClk_b );
-
    U_BUF_RXCLK : component BUFG port map ( I => rxOutClk_i, O => rxOutClk_b );
 
    G_COMMON : if ( WITH_COMMON_G ) generate
@@ -364,20 +361,13 @@ begin
             refclk_in      => sysClk
          );
 
-      G_REF_LOC : for ref in gtRefClk'low to gtRefClk'high generate
+      G_REF_GT_LOC : for ref in gtRefClk'low to gtRefClk'high generate
       begin
 
          gtRefClkLoc( ref ) <= gtRefClk( ref );
 
-         G_BUFH : if ( COMMON_BUF_TYPE_G = "BUFH" ) generate
-            U_BUF : BUFH port map ( I => gtRefClk( ref ), O => gtRefClkBuf( ref ) );
-         end generate G_BUFH;
+      end generate G_REF_GT_LOC;
 
-         G_BUFG : if ( COMMON_BUF_TYPE_G = "BUFG" ) generate
-            U_BUF : BUFG port map ( I => gtRefClk( ref ), O => gtRefClkBuf( ref ) );
-         end generate G_BUFG;
-
-      end generate G_REF_LOC;
 
       pllRstAny <= pllInitRst or pllRst_i(PLL0) or mgtControl.txPllReset;
 
@@ -429,7 +419,6 @@ begin
       gtPllSel_i       <= gtPllSel;
    end generate G_NO_COMMON;
 
-   txOutClk                          <= txOutClk_b;
    rxOutClk                          <= rxOutClk_b;
 
    rxData                            <= rxData_i;
@@ -499,7 +488,7 @@ begin
 
             probe0(21 downto  0) => (others => '0'),
             probe0(22          ) => rxRstDone_d,
-            probe0(25 downto 23) => RXRATE_C,
+            probe0(25 downto 23) => rxRate,
             probe0(26          ) => gtPllSel_d,
             probe0(27          ) => pllLocked_d,
             probe0(28          ) => pllRst_d,
@@ -509,7 +498,8 @@ begin
             probe0(32          ) => pllLocked_i1_d,
             probe0(33          ) => pllRefClkLost_i0_d,
             probe0(34          ) => pllRefClkLost_i1_d,
-            probe0(63 downto 35) => (others => '0'),
+            probe0(37 downto 35) => txRate,
+            probe0(63 downto 38) => (others => '0'),
 
             probe1(63 downto  0) => (others => '0'),
             probe2(63 downto  0) => (others => '0'),
@@ -544,7 +534,7 @@ begin
             probe0(21 downto 20) => rxDecErr_i,
             probe0(22          ) => softRxRst_d,
             probe0(23          ) => rxRstDone_d,
-            probe0(26 downto 24) => RXRATE_C,
+            probe0(26 downto 24) => rxRate,
             probe0(63 downto 27) => (others => '0'),
 
             probe1(63 downto  0) => (others => '0'),

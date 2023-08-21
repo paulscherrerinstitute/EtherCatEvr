@@ -124,7 +124,8 @@ architecture Impl of EcEvrProto is
   signal lan9254_o     : std_logic_vector(lan9254Pins'range);
   signal lan9254_t     : std_logic_vector(lan9254Pins'range);
 
-  signal mgtRefClk     : std_logic_vector(NUM_REFCLK_G - 1 downto 0);
+  signal mgtRefClkGT   : std_logic_vector(NUM_REFCLK_G - 1 downto 0);
+  signal mgtRefClkFab  : std_logic_vector(NUM_REFCLK_G - 1 downto 0);
   signal mgtRxP        : std_logic_vector(NUM_USED_MGT_C - 1 downto 0);
   signal mgtRxN        : std_logic_vector(NUM_USED_MGT_C - 1 downto 0);
   signal mgtTxP        : std_logic_vector(NUM_USED_MGT_C - 1 downto 0);
@@ -254,8 +255,8 @@ begin
          I                => mgtRefClkPPins(i),
          IB               => mgtRefClkNPins(i),
          CEB              => '0',
-         O                => mgtRefClk(i),
-         ODIV2            => open
+         O                => mgtRefClkGT(i),
+         ODIV2            => mgtRefClkFab(i)
       );
   end generate G_BUF_CLK_MGT;
 
@@ -420,7 +421,8 @@ begin
 
       lan9254Clk               => lan9254Clk,
 
-      mgtRefClk                => mgtRefClk,
+      mgtRefClkGT              => mgtRefClkGT,
+      mgtRefClkFab             => mgtRefClkFab,
 
       sysClk                   => sysClk,
       sysRst                   => open,

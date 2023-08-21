@@ -50,7 +50,8 @@ entity EcEvrProtoTop is
     -- from sysRst -> sysRstReq!
     sysRstReq                : in    std_logic := '0';
 
-    mgtRefClk                : in    std_logic_vector(1 downto 0) := (others => '0');
+    mgtRefClkGT              : in    std_logic_vector(1 downto 0) := (others => '0');
+    mgtRefClkFab             : in    std_logic_vector(1 downto 0) := (others => '0');
 
     -- LEDs
     leds                     : out   std_logic_vector(NUM_LED_G - 1 downto 0) := (others => '0');
@@ -226,10 +227,14 @@ architecture Impl of EcEvrProtoTop is
   signal mgtTxDataK       : std_logic_vector( 1 downto 0) := "01";
 
   signal mgtTxUsrClk      : std_logic;
+  signal mgtTxOutClkNb    : std_logic;
   signal mgtRxRecClk      : std_logic;
   signal mgtRxRecRst      : std_logic := '1';
-  signal mgtRefClkBuf     : std_logic_vector(1 downto 0);
   signal mgtRefClkLoc     : std_logic;
+  signal mgtRxRate        : std_logic_vector(2 downto 0) := "010"; -- rate divisor selection
+  signal mgtTxRate        : std_logic_vector(2 downto 0) := "010"; -- rate divisor selection
+
+  signal mgtHalfRate      : std_logic := '0';
 
   signal busReqs          : Udp2BusReqArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREQ_INIT_C);
   signal busReps          : Udp2BusRepArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREP_ERROR_C);
@@ -267,7 +272,7 @@ architecture Impl of EcEvrProtoTop is
   signal pdoTrgMgtClk     : std_logic;
   signal pdoTrgEvtClk     : std_logic;
 
-  -- blink with frequency refClk / 1e8 
+  -- blink with frequency refClk / 1e8
   subtype RefClkCountType  is natural range 0 to 49999999;
   subtype FlickerCountType is natural range 0 to 4999999;
 
@@ -570,9 +575,7 @@ begin
         pllRst           => open, -- out std_logic_vector(1 downto 0);
 
         -- ref clock for internal common block (WITH_COMMON_G = true)
-        gtRefClk         => mgtRefClk(MGT_REF_CLK_USED_IDX_G downto MGT_REF_CLK_USED_IDX_G), -- in  std_logic_vector
-        gtRefClkBuf      => mgtRefClkBuf,
-
+        gtRefClk         => mgtRefClkGT(MGT_REF_CLK_USED_IDX_G downto MGT_REF_CLK_USED_IDX_G), -- in  std_logic_vector
 
         -- Rx ports
         rxUsrClkActive   => open, -- in  std_logic := '1';
@@ -580,19 +583,58 @@ begin
         rxData           => mgtRxData,    -- out std_logic_vector(15 downto 0);
         rxDataK          => mgtRxDataK,   -- out std_logic_vector(1 downto 0);
         rxOutClk         => mgtRxRecClk, -- out std_logic;
+        rxRate           => mgtRxRate,
 
         -- Tx Ports
         txUsrClk         => mgtTxUsrClk, -- in  std_logic;
         txUsrClkActive   => open, -- in  std_logic := '1';
         txData           => mgtTxData,  -- in  std_logic_vector(15 downto 0);
         txDataK          => mgtTxDataK, -- in  std_logic_vector(1 downto 0);
-        txOutClk         => mgtTxUsrClk, -- out std_logic;
+        txOutClkNb       => mgtTxOutClkNb, -- out std_logic;
+        txRate           => mgtTxRate,
 
         mgtStatus        => mgtStatus,
         mgtControl       => mgtControl
       );
 
-    mgtRefClkLoc <= mgtRefClkBuf( MGT_REF_CLK_USED_IDX_G );
+    -- GTP wizard does not give us control over TXOUTCLKSEL; we use a hack to
+    -- be able to switch to half-rate by muxing to the div2 output of the
+    -- IBUFDS
+    --   mgtHalfRate:
+    --     '0':
+    --         - TXRATE/RXRATE => "010", rate divisor = 2
+    --         - mgtTxUsrClk   from TXOUTCLK
+    --     '1':
+    --         - TXRATE/RXRATE => "011", rate divisor = 4
+    --         - mgtTxUsrClk   from mgtRefClkFab (Div2 output of IBUFDS)
+    U_TXOUTCLK_MUX : BUFGMUX_CTRL
+      port map (
+        I0               => mgtTxOutClkNb,
+        I1               => mgtRefClkFab(MGT_REF_CLK_USED_IDX_G),
+        S                => mgtHalfRate,
+        O                => mgtTxUsrClk
+      );
+
+    mgtTxRate(2 downto 1) <= "01";
+    mgtRxRate(2 downto 1) <= "01";
+
+    U_SYNC_RXRATESEL : entity work.SynchronizerBit
+      port map (
+        clk              => mgtRxRecClk,
+        rst              => '0',
+        datInp(0)        => mgtHalfRate,
+        datOut(0)        => mgtRxRate(0)
+      );
+
+    U_SYNC_TXRATESEL : entity work.SynchronizerBit
+      port map (
+        clk              => mgtTxUsrClk,
+        rst              => '0',
+        datInp(0)        => mgtHalfRate,
+        datOut(0)        => mgtTxRate(0)
+      );
+
+    mgtRefClkLoc <= mgtTxUsrClk;
 
     -- pdoTrg is a combinatorial signal; resync to avoid critical CDC warning
     P_PDO_TRG_SYNC : process ( eventClk ) is
@@ -657,7 +699,7 @@ begin
          mgtLeds(1) <= '1';
          -- we flash blue if TxPDO is being sent...
          mgtLeds(2) <= pdoBlink(0);
-      elsif ( pllRefClkLost = '1' ) then 
+      elsif ( pllRefClkLost = '1' ) then
          -- no refclk; steady red if no SFP; if RX signal: steady yellow
          mgtLeds(0) <= '1';
          mgtLeds(1) <= not sfpLos(0);
@@ -668,7 +710,7 @@ begin
            mgtLeds(1) <= rxClkBlink;
          end if;
       end if;
-      
+
     end process P_MGT_LEDS;
 
   end block B_MGT;
@@ -694,7 +736,7 @@ begin
         MEAS_FREQ_WIDTH_G => evtClkMeas'length
       )
       port map (
-        measClk           => mgtRefClkLoc,
+        measClk           => eventClk, -- mgtRxRecClk,
         refClk            => sysClkLoc,
         freqOut           => evtClkMeas,
         freqVldOut        => evtClkMeasVld
@@ -797,7 +839,7 @@ begin
                                          & mgtStatus.txResetDone
                                          & mgtStatus.txPllLocked
                                          & mgtStatus.txPllRefClkLost
-                   
+
                                          & mgtStatus.rxNotIntable
                                          & mgtStatus.rxDispError
                                          & timingMMCMLocked
@@ -850,8 +892,9 @@ begin
       mgtControl.rxReset                 <= evrMGTControl.rxReset             or      r.regs(4)(28);
       mgtControl.rxPolarityInvert        <= evrMGTControl.rxPolarityInvert;
       mgtControl.rxCommaAlignDisable     <= evrMGTControl.rxCommaAlignDisable and not rxCommaAlignEn;
-      mgtControl.txPllReset              <= r.regs(4)(4);
-      mgtControl.txReset                 <= evrMGTControl.txReset;
+      mgtHalfRate                        <= r.regs(4)(6);
+      mgtControl.txPllReset              <= r.regs(4)(5);
+      mgtControl.txReset                 <= evrMGTControl.txReset or r.regs(4)(4);
       mgtControl.txPolarityInvert        <= evrMGTControl.txPolarityInvert;
       mgtControl.txLoopback              <= r.regs(4)(2 downto 0);
 
@@ -882,7 +925,7 @@ begin
 
     tstLedPw          <= r.regs(3)(tstLedPw'range);
 
-    sfpTxEn(0)        <= r.regs(4)(          31) or evrDCMode;
+    sfpTxEn(0)        <= r.regs(4)(          20) or evrDCMode;
     dbgTrg            <= r.regs(4)(          30);
     dbgVal            <= r.regs(5);
 
@@ -1215,7 +1258,7 @@ begin
   begin
     gpio_t <= (others => '1');
     gpio_o <= (others => '0');
-    gpio_t( L_C downto 0 ) <= (others => '0'); 
+    gpio_t( L_C downto 0 ) <= (others => '0');
     gpio_o( L_C downto 0 ) <= evrTriggers( L_C + 1 downto 1 );
   end process P_GPIO;
 
