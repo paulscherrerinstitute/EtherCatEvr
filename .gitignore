@@ -1,6 +1,9 @@
 # EMACS temp files
 *~
 
+# VIM swap files
+*.swp
+
 # Compiled source files
 *.com
 *.class
