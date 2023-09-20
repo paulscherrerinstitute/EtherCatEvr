@@ -1248,9 +1248,12 @@ begin
     ledsLoc                        <= (others => '0');
     ledsLoc(2 downto 0)            <= mgtLeds;
 --   ledsLoc(3)                     <= evrClkCount(evrClkCount'left);
-    ledsLoc(8)                     <= spiMstLoc.util(0) or tstLeds(2); --B
-    ledsLoc(7)                     <= spiMstLoc.util(1) or tstLeds(1); --G
-    ledsLoc(6)                     <=                      tstLeds(0); --R
+    ledsLod(5)                     <= tstLeds(2); -- B
+    ledsLod(4)                     <= tstLeds(1); -- G
+    ledsLod(3)                     <= tstLeds(0); -- R
+    ledsLoc(8)                     <= spiMstLoc.util(0); --B
+    ledsLoc(7)                     <= spiMstLoc.util(1); --G
+    ledsLoc(6)                     <=               '0'; --R
   end process P_LEDS;
 
   P_GPIO : process ( evrTriggers ) is
