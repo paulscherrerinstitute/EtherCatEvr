@@ -75,13 +75,13 @@ The board hosts two non-volatile memory devices:
 
   - EtherCAT SII EEPROM holds configurable EtherCAT-relevant data (e.g., layout of
     the PDO) as well as vendor-specific configuration parameters (e.g., timing reference
-    frequency)
+    frequency).
 
 Bootstrapping a new board involves the following steps:
 
- 1. Install some jumper.
- 2. Initial configuration of the FPGA via JTAG (when flash is blank).
- 3. Set DIP-Switch to EEPROM emulation mode (hardcoded default SII prom contents)
+ 1. Install some jumpers.
+ 2. Set DIP-Switch to EEPROM emulation mode (hardcoded default SII prom contents)
+ 3. Initial configuration of the FPGA via JTAG (when flash is blank).
  4. Bring up the board on EtherCAT.
  5. Use EtherCAT FoE to program the flash; after reboot/power-cycle the FPGA then
     configures from flash.
@@ -106,14 +106,14 @@ emulation mode:
 
   3. Set the DIP switch to the following positions
 
-      A -> ON (ALELO_polarity in emulation mode)
-      B -> ON (isolate EEPROM from Lan9254)
-      C -> ON (C..E select HBI-16 EEPROM emulation mode)
-      D -> OFF
-      E -> ON
-      F -> ON (enable ethernet autonegotiation on port B)
-      J -> ON  (firmware use: fallback boot)
-      K -> OFF (firmware use: reserved)
+        A -> ON (ALELO_polarity in emulation mode)
+        B -> ON (isolate EEPROM from Lan9254)
+        C -> ON (C..E select HBI-16 EEPROM emulation mode)
+        D -> OFF
+        E -> ON
+        F -> ON (enable ethernet autonegotiation on port B)
+        J -> ON  (firmware use: fallback boot)
+        K -> OFF (firmware use: reserved)
 
   4. Connect JTAG cable (J4).
 
