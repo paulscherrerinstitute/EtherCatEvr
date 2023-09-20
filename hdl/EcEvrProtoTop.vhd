@@ -909,7 +909,7 @@ begin
       evrMGTStatus.txPllRefClkLost       <= mgtStatus.txPllRefClkLost;
     end process P_MAP;
 
-    fileWP            <= not r.regs(2)(16);
+    fileWP            <= ( not r.regs(2)(16) ) and jumper7;
     -- no point resetting from a register; if we still have EoE connectivity this
     -- is unlikely to be necessary (ethercat reboot) and if we don't we can't get
     -- to this register anyways...
