@@ -79,15 +79,16 @@ The board hosts two non-volatile memory devices:
 
 Bootstrapping a new board involves the following steps:
 
- 1. Initial configuration of the FPGA via JTAG (when flash is blank).
- 2. Set DIP-Switch to EEPROM emulation mode (hardcoded default SII prom contents)
- 3. Bring up the board on EtherCAT.
- 4. Use EtherCAT FoE to program the flash; after reboot/power-cycle the FPGA then
+ 1. Install some jumper.
+ 2. Initial configuration of the FPGA via JTAG (when flash is blank).
+ 3. Set DIP-Switch to EEPROM emulation mode (hardcoded default SII prom contents)
+ 4. Bring up the board on EtherCAT.
+ 5. Use EtherCAT FoE to program the flash; after reboot/power-cycle the FPGA then
     configures from flash.
- 5. Generate SII EEPROM image using GUI tool.
- 6. Use EtherCAT to program the EEPROM the image generated in the previous step.
- 7. Set DIP-Switch to disable EEPROM emulation mode.
- 8. Reboot; the board should now be functional.
+ 6. Generate SII EEPROM image using GUI tool.
+ 7. Use EtherCAT to program the EEPROM the image generated in the previous step.
+ 8. Set DIP-Switch to disable EEPROM emulation mode.
+ 9. Reboot; the board should now be functional.
 
 Future firmware updates can be done via EtherCAT/FoE.
 
@@ -96,10 +97,14 @@ EEPROM/SII updates do not require a firmware update an can also be done via Ethe
 ### Loading/Bootstrapping the Initial Bitstream
 
 New hardware comes with blank flash and EEPROM storage devices. Thus, the first time
-the board is powered up the FPGA must be configured with JTAG and booted in EEPROM
+the board is powered up the FPGA must be jumpered, configured with JTAG and booted in EEPROM
 emulation mode:
 
-  1. Set the DIP switch to the following positions
+  1. Install jumper on block J1 between pins 5-6 (marked 'On' on silkscreen).
+
+  2. Install jumper on JP2201 between pins 2-3 (closer to ethernet connector).
+
+  3. Set the DIP switch to the following positions
 
       A -> ON (ALELO_polarity in emulation mode)
       B -> ON (isolate EEPROM from Lan9254)
@@ -110,7 +115,9 @@ emulation mode:
       J -> ON  (firmware use: fallback boot)
       K -> OFF (firmware use: reserved)
 
-  2. Connect JTAG cable and program the FPGA with the vivado hardware manager
+  4. Connect JTAG cable (J4).
+
+  5. Connect to USBC power source and program the FPGA with the vivado hardware manager.
 
 The board should now be operational and use default EEPROM settings that are
 hardcoded in the firmware. These settings are intended to suffice for initial
