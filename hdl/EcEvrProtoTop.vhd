@@ -13,6 +13,9 @@ use     work.FoE2SpiPkg.all;
 use     work.IlaWrappersPkg.all;
 use     work.TimingGtpPkg.all;
 
+library unisim;
+use     unisim.vcomponents.all;
+
 entity EcEvrProtoTop is
   generic (
     GIT_HASH_G               : std_logic_vector(31 downto 0);
