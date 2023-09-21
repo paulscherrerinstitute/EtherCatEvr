@@ -209,11 +209,13 @@ architecture Impl of EcEvrProtoTop is
   signal mgtRstCnt        : natural range 0 to TIMG_RST_CNT_C := TIMG_RST_CNT_C;
 
   signal ledsLoc          : std_logic_vector(leds'range)      := (others => '0');
+  signal pulsLed          : std_logic;
   signal pdoLeds          : Slv08Array      (2 downto 0)      := (others => (others => '0'));
   signal tstLeds          : std_logic_vector(2 downto 0)      := (others => '0');
   signal mgtLeds          : std_logic_vector(2 downto 0)      := (others => '0');
 
   signal tstLedPw         : std_logic_vector(23 downto 0);
+  signal pulsLedSel       : unsigned(2 downto 0);
 
   signal lan9254HbiOb     : Lan9254HBIOutType;
   signal lan9254HbiIb     : Lan9254HBIInpType;
@@ -765,7 +767,10 @@ begin
       rep                      => UDP2BUSREP_INIT_C,
       rxRstDonLst              => '0',
       -- initialize individual registers here
-      regs                     => (others => (others => '0'))
+      regs                     => (
+        3      => x"0700_0000",
+        others => (others => '0')
+      )
     );
 
     signal r   : RegType := REG_INIT_C;
@@ -927,6 +932,7 @@ begin
     end process P_PWRCYCLE;
 
     tstLedPw          <= r.regs(3)(tstLedPw'range);
+    pulsLedSel        <= unsigned( r.regs(3)(26 downto 24) );
 
     sfpTxEn(0)        <= r.regs(4)(          20) or evrDCMode;
     dbgTrg            <= r.regs(4)(          30);
@@ -1246,7 +1252,17 @@ begin
 
   end generate G_PWM;
 
-  P_LEDS : process( spiMstLoc, pdoLeds, tstLeds, mgtLeds, evrClkCount, refClkBlink ) is
+  P_PULS_LED_MUX : process ( pulsLedSel, evrTriggers ) is
+    variable s : natural;
+  begin
+    pulsLed <= '0';
+    s       := to_integer( pulsLedSel );
+    if ( ( s <= evrTriggers'high ) and ( s >= evrTriggers'low ) ) then
+       pulsLed <= evrTriggers( s );
+    end if;
+  end process P_PULS_LED_MUX;
+
+  P_LEDS : process( spiMstLoc, pdoLeds, tstLeds, mgtLeds, evrClkCount, refClkBlink, pulsLed ) is
   begin
     ledsLoc                        <= (others => '0');
     ledsLoc(2 downto 0)            <= mgtLeds;
@@ -1256,7 +1272,7 @@ begin
     ledsLoc(3)                     <= tstLeds(0); -- R
     ledsLoc(8)                     <= spiMstLoc.util(0); --B
     ledsLoc(7)                     <= spiMstLoc.util(1); --G
-    ledsLoc(6)                     <=               '0'; --R
+    ledsLoc(6)                     <= pulsLed;           --R
   end process P_LEDS;
 
   P_GPIO : process ( evrTriggers ) is
