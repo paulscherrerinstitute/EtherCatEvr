@@ -21,9 +21,27 @@ Byte addresses
   0x18_0000 - 0x18_ffff: TOP module local registers
                        power-cycle: write 0xdead to register @ offset 8
                        flash-write enable for golden area: 0x10000 @ offset 8
+                       mgt status     @ off 0x04
+                                   sta[13:12]: txBufstatus
+                                   sta[   10]: mgtStatus.txResetDone
+                                   sta[    9]: mgtStatus.txPllLocked
+                                   sta[    8]: mgtStatus.txPllRefClkLost
+
+                                   sta[  7:6]: mgtStatus.rxNotIntable
+                                   sta[  5:4]: mgtStatus.rxDispError
+                                   sta[    3]: timingMMCMLocked
+                                   sta[    2]: mgtStatus.rxResetDone
+                                   sta[    1]: mgtStatus.rxPllLocked
+                                   sta[    0]: mgtStatus.rxPllRefClkLost,
+mct control    @ off 0x10
+                                   ctl[   28]: rxReset
+                                   ctl[    6]: mgt half rate
+                                   ctl[    5]: txPllReset
+                                   ctl[    4]: txReset
+                                   ctl[  2:0]: tx Loopback
                        ref clock freq @ off 0x20
                        evt clock freq @ off 0x24
-  0x19_0000 - 0x19_ffff: GTP DRP registers (half-word aligned access!)
+   0x19_0000 - 0x19_ffff: GTP DRP registers (half-word aligned access!)
   0x1a_0000 - 0x1a_ffff: ICAP registers    (dword aligned access!)
   0x1b_0000 - 0x1b_ffff: <unused>
   0x1c_0000 - 0x1c_ffff: <unused>
