@@ -9,7 +9,7 @@
       CONFIG.gt0_val_rx_data_width {16}\
       CONFIG.gt0_val_decoding {8B/10B}\
       CONFIG.gt0_val_drp_clock {50}\
-      CONFIG.gt0_val_txbuf_en {false}\
+      CONFIG.gt0_val_txbuf_en {true}\
       CONFIG.gt0_val_rxbuf_en {false}\
       CONFIG.gt0_val_comma_preset {User_defined}\
       CONFIG.gt0_val_align_comma_word {Two_Byte_Boundaries}\
