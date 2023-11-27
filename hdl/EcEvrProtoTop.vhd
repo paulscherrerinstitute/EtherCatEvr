@@ -283,8 +283,9 @@ architecture Impl of EcEvrProtoTop is
 
   signal rxClkCount       : RefClkCountType  := RefClkCountType'high;
   signal rxClkBlink       : std_logic        := '0';
-  signal refClkCount      : RefClkCountType  := RefClkCountType'high;
-  signal refClkBlink      : std_logic        := '0';
+  signal dbgClkLoc        : std_logic;
+  signal dbgClkCount      : RefClkCountType  := RefClkCountType'high;
+  signal dbgClkBlink      : std_logic        := '0';
   -- flicker with ~10hz
   signal flickerCount     : FlickerCountType := 0;
 
@@ -581,6 +582,7 @@ begin
 
         -- ref clock for internal common block (WITH_COMMON_G = true)
         gtRefClk         => mgtRefClkGT(MGT_REF_CLK_USED_IDX_G downto MGT_REF_CLK_USED_IDX_G), -- in  std_logic_vector
+        gtgRefCLk        => (others => pllClk),
 
         -- Rx ports
         rxUsrClkActive   => open, -- in  std_logic := '1';
@@ -658,14 +660,19 @@ begin
         datOut(0)        => pdoTrgMgtClk
       );
 
-    P_DBG_BLINK : process ( mgtRefClkLoc ) is
+    -- dbgClkLoc <= mgtRefClkLoc;
+    -- dbgClkLoc <= pllClk;
+    -- dbgClkLoc <= lan9254Clk;
+    dbgClkLoc <= '0';
+
+    P_DBG_BLINK : process ( dbgClkLoc ) is
     begin
-      if ( rising_edge( mgtRefClkLoc ) ) then
-        if ( refClkCount = 0 ) then
-          refClkBlink <= not refClkBlink;
-          refClkCount <= RefClkCountType'high - 1;
+      if ( rising_edge( dbgClkLoc ) ) then
+        if ( dbgClkCount = 0 ) then
+          dbgClkBlink <= not dbgClkBlink;
+          dbgClkCount <= RefClkCountType'high - 1;
         else
-          refClkCount <= refClkCount - 1;
+          dbgClkCount <= dbgClkCount - 1;
         end if;
       end if;
     end process P_DBG_BLINK;
@@ -1262,7 +1269,7 @@ begin
     end if;
   end process P_PULS_LED_MUX;
 
-  P_LEDS : process( spiMstLoc, pdoLeds, tstLeds, mgtLeds, evrClkCount, refClkBlink, pulsLed ) is
+  P_LEDS : process( spiMstLoc, pdoLeds, tstLeds, mgtLeds, evrClkCount, dbgClkBlink, pulsLed ) is
   begin
     ledsLoc                        <= (others => '0');
     ledsLoc(2 downto 0)            <= mgtLeds;
@@ -1272,7 +1279,7 @@ begin
     ledsLoc(3)                     <= tstLeds(0); -- R
     ledsLoc(8)                     <= spiMstLoc.util(0); --B
     ledsLoc(7)                     <= spiMstLoc.util(1); --G
-    ledsLoc(6)                     <= pulsLed;           --R
+    ledsLoc(6)                     <= pulsLed or dbgClkBlink; --R
   end process P_LEDS;
 
   P_GPIO : process ( evrTriggers ) is
