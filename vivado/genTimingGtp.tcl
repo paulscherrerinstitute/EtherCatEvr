@@ -39,7 +39,7 @@
       CONFIG.gt0_val_port_rxpcommaalignen {true} \
       CONFIG.gt0_val_port_txbufstatus {true} \
       CONFIG.gt0_val_tx_buffer_bypass_mode {Manual}\
-      CONFIG.gt0_val_txoutclk_source {true}\
+      CONFIG.gt0_val_txoutclk_source {false}\
       CONFIG.gt0_val_rx_buffer_bypass_mode {Auto}\
       CONFIG.gt0_val_rxusrclk {RXOUTCLK}\
       CONFIG.gt0_val_dfe_mode {LPM-Auto}\

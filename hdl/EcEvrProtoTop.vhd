@@ -603,21 +603,16 @@ begin
         mgtControl       => mgtControl
       );
 
-    -- GTP wizard does not give us control over TXOUTCLKSEL; we use a hack to
-    -- be able to switch to half-rate by muxing to the div2 output of the
-    -- IBUFDS
+    -- GTP wizard does gives us TXOUTCLKPMA.
     --   mgtHalfRate:
     --     '0':
     --         - TXRATE/RXRATE => "010", rate divisor = 2
-    --         - mgtTxUsrClk   from TXOUTCLK
     --     '1':
     --         - TXRATE/RXRATE => "011", rate divisor = 4
-    --         - mgtTxUsrClk   from mgtRefClkFab (Div2 output of IBUFDS)
-    U_TXOUTCLK_MUX : BUFGMUX_CTRL
+    --   could use bit 1 to switch to rate-divisor 1
+    U_TXOUTCLK_BUF : BUFG
       port map (
-        I0               => mgtTxOutClkNb,
-        I1               => mgtRefClkFab(MGT_REF_CLK_USED_IDX_G),
-        S                => mgtHalfRate,
+        I                => mgtTxOutClkNb,
         O                => mgtTxUsrClk
       );
 
