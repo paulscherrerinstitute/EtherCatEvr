@@ -2,6 +2,7 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
+use     ieee.math_real.all;
 
 use     work.ESCBasicTypesPkg.all;
 use     work.Lan9254Pkg.all;
@@ -121,6 +122,7 @@ architecture Impl of EcEvrProtoTop is
   constant JMP_DEBC_C     : natural   := natural( JMP_DEBT_C     * SYS_CLK_FREQ_G ) - 1;
   constant LAN_RST_ASSC_C : natural   := natural( LAN_RST_TIME_C * SYS_CLK_FREQ_G ) - 1;
   constant LAN_RST_WAIC_C : natural   := natural( LAN_RST_WAIT_C * SYS_CLK_FREQ_G ) - 1;
+  constant LD_LED_BLINK_C : natural   := natural( ceil( log( 2.0, 0.1 * SYS_CLK_FREQ_G )  ) );
 
   constant NUM_BUS_SUBS_C : natural   := 1;
   constant SUB_IDX_LOC_C  : natural   := 0;
@@ -210,6 +212,11 @@ architecture Impl of EcEvrProtoTop is
 
   signal ledsLoc          : std_logic_vector(leds'range)      := (others => '0');
   signal pulsLed          : std_logic;
+  signal pulsLedTrigAsyn  : std_logic;
+  signal pulsLedTrig      : std_logic;
+  signal pulsLedLast      : std_logic := '0';
+  -- extra bit for end-detection
+  signal pulsLedStretch   : unsigned(LD_LED_BLINK_C downto 0) := (others => '0');
   signal pdoLeds          : Slv08Array      (2 downto 0)      := (others => (others => '0'));
   signal tstLeds          : std_logic_vector(2 downto 0)      := (others => '0');
   signal mgtLeds          : std_logic_vector(2 downto 0)      := (others => '0');
@@ -301,8 +308,10 @@ architecture Impl of EcEvrProtoTop is
 
   signal refClkMeas       : FreqMeasType;
   signal evtClkMeas       : FreqMeasType;
+  signal txuClkMeas       : FreqMeasType;
   signal refClkMeasVld    : std_logic;
   signal evtClkMeasVld    : std_logic;
+  signal txuClkMeasVld    : std_logic;
 
 begin
 
@@ -635,8 +644,6 @@ begin
         datOut(0)        => mgtTxRate(0)
       );
 
-    mgtRefClkLoc <= mgtTxUsrClk;
-
     -- pdoTrg is a combinatorial signal; resync to avoid critical CDC warning
     P_PDO_TRG_SYNC : process ( eventClk ) is
     begin
@@ -654,6 +661,16 @@ begin
         datOut(0)        => pdoTrgMgtClk
       );
 
+    U_SYNC_LED_TRG : entity work.SynchronizerBit
+      port map (
+        clk              => sysClkLoc,
+        rst              => '0',
+        datInp(0)        => pulsLedTrigAsyn,
+        datOut(0)        => pulsLedTrig
+      );
+
+
+    mgtRefClkLoc <= mgtRefClkGT(MGT_REF_CLK_USED_IDX_G);
     -- dbgClkLoc <= mgtRefClkLoc;
     -- dbgClkLoc <= pllClk;
     -- dbgClkLoc <= lan9254Clk;
@@ -748,6 +765,19 @@ begin
         freqVldOut        => evtClkMeasVld
       );
 
+    U_MEAS_TXUCLK : entity work.ClockMeasure
+      generic map (
+        REF_FREQ_HZ_G     => SYS_CLK_FREQ_G,
+        MEAS_FREQ_WIDTH_G => txuClkMeas'length
+      )
+      port map (
+        measClk           => mgtTxUsrClk,
+        refClk            => sysClkLoc,
+        freqOut           => txuClkMeas,
+        freqVldOut        => txuClkMeasVld
+      );
+
+
   end block B_FREQ_MEAS;
 
   B_LOC_REGS : block is
@@ -803,7 +833,8 @@ begin
        evrMGTControl,
        timingMMCMLocked,
        evtClkMeas, evtClkMeasVld,
-       refClkMeas, refClkMeasVld
+       refClkMeas, refClkMeasVld,
+       txuClkMeas, txuClkMeasVld
      ) is
        variable v : RegType;
        variable a : unsigned(7 downto 0);
@@ -865,6 +896,10 @@ begin
 
       if ( evtClkMeasVld = '1' ) then
          v.regs(9) := std_logic_vector( resize( evtClkMeas, v.regs(9)'length ) );
+      end if;
+
+      if ( txuClkMeasVld = '1' ) then
+         v.regs(10) := std_logic_vector( resize( txuClkMeas, v.regs(10)'length ) );
       end if;
 
       rin <= v;
@@ -1256,12 +1291,27 @@ begin
   P_PULS_LED_MUX : process ( pulsLedSel, evrTriggers ) is
     variable s : natural;
   begin
-    pulsLed <= '0';
+    pulsLedTrigAsyn <= '0';
     s       := to_integer( pulsLedSel );
     if ( ( s <= evrTriggers'high ) and ( s >= evrTriggers'low ) ) then
-       pulsLed <= evrTriggers( s );
+       pulsLedTrigAsyn <= evrTriggers( s );
     end if;
   end process P_PULS_LED_MUX;
+
+  P_PULS_LED_STRETCH : process ( sysClkLoc ) is
+  begin
+    if ( rising_edge( sysClkLoc ) ) then
+       pulsLedLast <= pulsLedTrig;
+       if ( (not pulsLedLast and pulsLedTrig) = '1' ) then
+          pulsLedStretch                      <= (others => '0');
+          pulsLedStretch(pulsLedStretch'left) <= '1';
+       elsif ( pulsLedStretch(pulsLedStretch'left) = '1' ) then
+          pulsLedStretch <= pulsLedStretch + 1;
+       end if ;
+    end if;
+  end process P_PULS_LED_STRETCH;
+
+  pulsLed <= pulsLedTrig or pulsLedStretch(pulsLedStretch'left);
 
   P_LEDS : process( spiMstLoc, pdoLeds, tstLeds, mgtLeds, evrClkCount, dbgClkBlink, pulsLed ) is
   begin
