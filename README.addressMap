@@ -4,6 +4,22 @@ Byte addresses
 
 0x00_0000 - 0x07_ffff: MUX ->
   0x00_0000 - 0x01_ffff: PSI EVR320/openevr registers
+                          @off 0x000: status
+                          @off 0x004: evr freq. measurement
+                          @off 0x008: dc measurement
+                          @off 0x00c: dc value
+                          @off 0x010: dc status
+                          @off 0x014: dc topo
+                          @off 0x018: dc target
+                       pulse generators 0..3:
+                          @off 0x2X0: pulse-gen #X width
+                          @off 0x2X4: pulse-gen #X delay
+                          @off 0x2X8: pulse-gen #X event [7:0], polarity[30], enable[31]
+                       extra events
+                          @off 0x4X0: width (read-only)
+                          @off 0x4X4: delay (read-only)
+                          @off 0x4X8: event [7:0], enable[31]
+                       
   0x02_0000 - 0x03_ffff: Configuration readback; GIT_HASH (@0x02_0010) 
   0x04_0000 - 0x05_ffff: <unused>
   0x06_0000 - 0x07_ffff: <unused>
@@ -33,15 +49,27 @@ Byte addresses
                                    sta[    2]: mgtStatus.rxResetDone
                                    sta[    1]: mgtStatus.rxPllLocked
                                    sta[    0]: mgtStatus.rxPllRefClkLost,
-mct control    @ off 0x10
+                       brd control    @ off 0x08
+                                   ctl[ 15:0]: write 0xdead => power-cycle
+                                   ctl[   16]: golden-image write-enable (always enabled if switch-7 is ON)
+                       led control    @ off 0x0c
+                                   ctl[  7:0]: RED PWM
+                                   ctl[ 15:8]: GRN PWM
+                                   ctl[23:16]: BLU PWM
+                                   ctl[26:24]: mux: map pulse-gen X to red LED
+                       mct control    @ off 0x10
                                    ctl[   28]: rxReset
+                                   ctl[   27]: rxCommaAlignEn
                                    ctl[    6]: mgt half rate
                                    ctl[    5]: txPllReset
                                    ctl[    4]: txReset
                                    ctl[  2:0]: tx Loopback
+                       rx rst counter @ off 0x18 (counts @ of RX resets)
+                       icap dbg trig  @ off 0x1c RESERVED
                        ref clock freq @ off 0x20
                        evt clock freq @ off 0x24
-   0x19_0000 - 0x19_ffff: GTP DRP registers (half-word aligned access!)
+                       tx  clock freq @ off 0x28
+  0x19_0000 - 0x19_ffff: GTP DRP registers (half-word aligned access!)
   0x1a_0000 - 0x1a_ffff: ICAP registers    (dword aligned access!)
   0x1b_0000 - 0x1b_ffff: <unused>
   0x1c_0000 - 0x1c_ffff: <unused>
@@ -50,5 +78,28 @@ mct control    @ off 0x10
   0x1f_0000 - 0x1f_ffff: <unused>
 0x20_0000 - 0x27_ffff: <unused>
 0x28_0000 - 0x2f_ffff: <reserved>
-0x30_0000 - 0x37_ffff: ESC Statistics counters
+0x30_0000 - 0x37_ffff: ESC Statistics counters (use ecurcli -s)
+   counters:  0:  ESC RX mailbox packets
+              1:  ESC RX PDO     packets
+              2:  EoE RX fragments
+              3:  EoE RX frames
+              4:  EoE RX dropped frames
+              5:  ETH/UDP RX dropped (mac address mismatch)
+              6:  ETH/UDP RX dropped short frames
+              7:  ETH/UDP RX accepted ARP headers
+              8:  ETH/UDP RX accepted IP4 headers
+              9:  ETH/UDP RX unknown headers
+             10:  ETH/UDP RX dropped ARP frames
+             11:  ETH/UDP RX ARP requests
+             12:  ETH/UDP RX dropped IPV4 frames
+             13:  ETH/UDP RX PING requests
+             14:  ETH/UDP RX UDP  requests
+             15:  ETH/UDP RX dropped IP4 protocol
+             16:  ETH/UDP RX dropped IP4 (address mismatch)
+             17:  ETH/UDP RX dropped ICMP request
+             18:  ETH/UDP RX PING headers
+             19:  ETH/UDP RX dropped (UDP port mismatch)
+             20:  ETH/UDP RX accepted UDP
+             21:  ETH/UDP RX forwarded payload frames
+             
 0x38_0000 - 0x3f_ffff: Lan9254 chip (careful!)
