@@ -1,0 +1,29 @@
+Clocking notes:
+
+The Artix-7 GTP has an operating range from 1.6..3.2 Gbps (rate_div >=2;
+speed grade 2+3 up to 3.3GHz). With a feedback divider of 20 this
+gives a 
+
+   rate = PLL_freq * 2 / rate_div
+
+=> at rate_div = 2 the MGT can handle
+
+   80MHz <= event_clock <= 160MHz  (165MHz for 2+3 speed grade)
+ 
+(> 160MHz could be achieved by grade 2+3 at rate_div = 1 but
+ would require FW changes).
+
+  -> reference clock fref = event_clock
+
+=> at rate_div = 4
+
+   40MHz <= event_clock <= 80MHz
+
+The latter regime requires
+
+   a) reference clock fref = 2 * event_clock
+   b) ideally: switch TXOUTCLKSEL to fref/2; since the wizard does not
+      route this signal we use the divider in the IBUFDS to divide by 2.
+
+Switching of rate_div is performed by setting 'half_rate'
+in register4[6].
