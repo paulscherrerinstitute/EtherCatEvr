@@ -582,7 +582,6 @@ begin
 
         -- ref clock for internal common block (WITH_COMMON_G = true)
         gtRefClk         => mgtRefClkGT(MGT_REF_CLK_USED_IDX_G downto MGT_REF_CLK_USED_IDX_G), -- in  std_logic_vector
-        gtgRefCLk        => (others => pllClk),
 
         -- Rx ports
         rxUsrClkActive   => open, -- in  std_logic := '1';
