@@ -1,0 +1,37 @@
+# LEDs
+
+## D7 (Front; LHS, next to SFP)
+
+ - EVR link stable: steady green; blink blue when TXPDO is sent.
+ - reference clock detected: if RX power detected blink yellow, if
+   no RX power is detected blink red; blink rate is recovered RX clock
+   divided by 1E8.
+ - no reference clock detected: steady yellow if RX power is detected,
+   steady red if no RX power is detected.
+
+## D8 (Front; Left of USBC Connector)
+
+ - green: power OK, FPGA configuration DONE.
+ - yellow: power OK, FPGA configuration NOT DONE.
+
+## D1 (Front; Right of USBC Connector)
+
+ - user LED (RGB); controllable via RXPDO and register 0x18000c[23:0].
+   The control word provides a PWM value for B[23:16], G[15:8], R[7:0]
+   which is used by a in-firmware PWM controller. The value is the
+   (saturated) sum of the numbers retrieved from the register and RXPDO,
+   respectively.
+
+## D2 (Front; Right of D1)
+
+ - SPI flash erase in progress: blink blue
+ - SPI flash write in progress: blink green
+ - red: can be mapped to a pulse-generator output (via reg. 0x18000c[26:24]).
+
+## D2101 (Back; Rhs of LEMO)
+
+ - EtherCat ERRLED (red)
+
+## D2102 (Back; Rhs of D2101)
+
+ - EtherCat RUNLED (green)
