@@ -788,7 +788,7 @@ begin
       rxRstDonLst              => '0',
       -- initialize individual registers here
       regs                     => (
-        3      => x"0700_0000",
+        3      => x"0100_0000",
         others => (others => '0')
       )
     );
