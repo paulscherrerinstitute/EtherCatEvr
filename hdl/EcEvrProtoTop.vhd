@@ -122,7 +122,7 @@ architecture Impl of EcEvrProtoTop is
   constant JMP_DEBC_C     : natural   := natural( JMP_DEBT_C     * SYS_CLK_FREQ_G ) - 1;
   constant LAN_RST_ASSC_C : natural   := natural( LAN_RST_TIME_C * SYS_CLK_FREQ_G ) - 1;
   constant LAN_RST_WAIC_C : natural   := natural( LAN_RST_WAIT_C * SYS_CLK_FREQ_G ) - 1;
-  constant LD_LED_BLINK_C : natural   := natural( ceil( log( 2.0, 0.1 * SYS_CLK_FREQ_G )  ) );
+  constant LD_LED_BLINK_C : natural   := natural( ceil( log2( 0.1 * SYS_CLK_FREQ_G )  ) );
 
   constant NUM_BUS_SUBS_C : natural   := 1;
   constant SUB_IDX_LOC_C  : natural   := 0;
@@ -212,9 +212,7 @@ architecture Impl of EcEvrProtoTop is
 
   signal ledsLoc          : std_logic_vector(leds'range)      := (others => '0');
   signal pulsLed          : std_logic;
-  signal pulsLedTrigAsyn  : std_logic;
-  signal pulsLedTrig      : std_logic;
-  signal pulsLedLast      : std_logic := '0';
+  signal pulsLedTrig      : std_logic := '0';
   -- extra bit for end-detection
   signal pulsLedStretch   : unsigned(LD_LED_BLINK_C downto 0) := (others => '0');
   signal pdoLeds          : Slv08Array      (2 downto 0)      := (others => (others => '0'));
@@ -660,15 +658,6 @@ begin
         datInp(0)        => pdoTrgEvtClk,
         datOut(0)        => pdoTrgMgtClk
       );
-
-    U_SYNC_LED_TRG : entity work.SynchronizerBit
-      port map (
-        clk              => sysClkLoc,
-        rst              => '0',
-        datInp(0)        => pulsLedTrigAsyn,
-        datOut(0)        => pulsLedTrig
-      );
-
 
     mgtRefClkLoc <= mgtRefClkGT(MGT_REF_CLK_USED_IDX_G);
     -- dbgClkLoc <= mgtRefClkLoc;
@@ -1288,28 +1277,71 @@ begin
 
   end generate G_PWM;
 
-  P_PULS_LED_MUX : process ( pulsLedSel, evrTriggers ) is
-    variable s : natural;
+  B_PULS_LED : block is
+    signal pulsLedTrigAsyn  : std_logic;
+    signal pulsLedTrigSync  : std_logic;
+    signal pulsLedTrigTgl   : std_logic := '0';
+    signal pulsLedTrigAck   : std_logic := '0';
+    signal pulsLedTrigLast  : std_logic := '0';
   begin
-    pulsLedTrigAsyn <= '0';
-    s       := to_integer( pulsLedSel );
-    if ( ( s <= evrTriggers'high ) and ( s >= evrTriggers'low ) ) then
-       pulsLedTrigAsyn <= evrTriggers( s );
-    end if;
-  end process P_PULS_LED_MUX;
 
-  P_PULS_LED_STRETCH : process ( sysClkLoc ) is
-  begin
-    if ( rising_edge( sysClkLoc ) ) then
-       pulsLedLast <= pulsLedTrig;
-       if ( (not pulsLedLast and pulsLedTrig) = '1' ) then
-          pulsLedStretch                      <= (others => '0');
-          pulsLedStretch(pulsLedStretch'left) <= '1';
-       elsif ( pulsLedStretch(pulsLedStretch'left) = '1' ) then
-          pulsLedStretch <= pulsLedStretch + 1;
-       end if ;
-    end if;
-  end process P_PULS_LED_STRETCH;
+    P_PULS_LED_MUX : process ( pulsLedSel, evrTriggers ) is
+      variable s : natural;
+    begin
+      pulsLedTrigAsyn <= '0';
+      s       := to_integer( pulsLedSel );
+      if ( ( s <= evrTriggers'high ) and ( s >= evrTriggers'low ) ) then
+         pulsLedTrigAsyn <= evrTriggers( s );
+      end if;
+    end process P_PULS_LED_MUX;
+
+    U_SYNC_LED_TRG : entity work.SynchronizerBit
+      generic map (
+        WIDTH_G          => 2
+      )
+      port map (
+        clk              => eventClk,
+        rst              => '0',
+        datInp(0)        => pulsLedTrigAsyn,
+        datInp(1)        => pulsLedTrig,
+        datOut(0)        => pulsLedTrigSync,
+        datOut(1)        => pulsLedTrigAck
+      );
+
+    P_TGL : process ( eventClk ) is
+    begin
+      if ( rising_edge( eventClk ) ) then
+         if ( pulsLedTrigAck = '1' ) then
+            pulsLedTrigTgl <= '0';
+         end if;
+         if ( pulsLedTrigSync = '1' ) then
+            pulsLedTrigTgl <= '1';
+         end if;
+      end if;
+    end process P_TGL;
+
+    U_SYNC_LED_TGL : entity work.SynchronizerBit
+      port map (
+        clk              => sysClkLoc,
+        rst              => '0',
+        datInp(0)        => pulsLedTrigTgl,
+        datOut(0)        => pulsLedTrig
+      );
+
+    P_PULS_LED_STRETCH : process ( sysClkLoc ) is
+    begin
+      if ( rising_edge( sysClkLoc ) ) then
+         pulsLedTrigLast <= pulsLedTrig;
+         if ( (not pulsLedTrigLast and pulsLedTrig) = '1' ) then
+            pulsLedStretch                      <= (others => '0');
+            pulsLedStretch(pulsLedStretch'left) <= '1';
+         elsif ( pulsLedStretch(pulsLedStretch'left) = '1' ) then
+            pulsLedStretch <= pulsLedStretch + 1;
+         end if ;
+      end if;
+    end process P_PULS_LED_STRETCH;
+
+  end block B_PULS_LED;
 
   pulsLed <= pulsLedTrig or pulsLedStretch(pulsLedStretch'left);
 
